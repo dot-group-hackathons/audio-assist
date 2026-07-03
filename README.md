@@ -1,4 +1,20 @@
-# Welcome to your Expo app 👋
+# audio-assist
+
+A background service that listens for important sounds (doorbell, smoke alarm,
+your name…) and alerts the user with a **vibration** — aimed at people who are
+deaf or hard of hearing. This is the base build: a single generic buzz for every
+sound (no specialized patterns yet), a platform-agnostic core, and documented
+iOS-fork seams.
+
+- **Architecture & how to run:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **iOS fork guide:** [docs/IOS_FORK.md](docs/IOS_FORK.md)
+
+Quick start: `npm install` then `npm run android` / `npm run ios` / `npm run web`,
+tap **Start**, then a **Simulate** button to feel the alert.
+
+---
+
+## Expo scaffolding notes
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
