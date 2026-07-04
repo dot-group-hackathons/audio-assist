@@ -2,7 +2,6 @@ import * as base64js from 'base64-js';
 import { useCallback, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from "react-native";
 import LiveAudioStream from 'react-native-live-audio-stream';
-import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import { useModelContext } from './ModelContext';
 
 const WINDOW_SIZE = 15600;
@@ -16,7 +15,11 @@ async function requestMicPermission() {
 
     return res === PermissionsAndroid.RESULTS.GRANTED;
   }
-  
+
+  // iOS only. Loaded lazily so Android — which uses PermissionsAndroid above —
+  // never pulls in react-native-permissions' native module (absent from the
+  // Android dev build, and importing it eagerly would crash on launch).
+  const { check, PERMISSIONS, request, RESULTS } = require("react-native-permissions");
   const permission = PERMISSIONS.IOS.MICROPHONE;
   const status = await check(permission);
 
@@ -45,6 +48,7 @@ export function useClassifier(
     if (!ready) return;
 
     const granted = await requestMicPermission();
+    console.log("[classifier] start: ready=", ready, "granted=", granted, "selected=", selectedLabelsRef.current.size);
     if (!granted) return;
 
     bufferRef.current = [];
@@ -83,6 +87,7 @@ export function useClassifier(
             bestLabel = label;
           }
         }
+        console.log("[classifier] window best:", bestLabel || "(none selected matched)", bestScore.toFixed(3));
         if (bestScore >= MIN_SCORE) {
           onResult(bestLabel, bestScore);
         }

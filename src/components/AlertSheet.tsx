@@ -63,9 +63,6 @@ export default function AlertSheet({ detection, onClose }: Props) {
                 </View>
 
                 <View style={styles.actions}>
-                  <Pressable style={[styles.btn, styles.ghost]} onPress={onClose}>
-                    <Text style={styles.ghostText}>Snooze 5 min</Text>
-                  </Pressable>
                   <Pressable style={[styles.btn, styles.primary]} onPress={onClose}>
                     <Text style={styles.primaryText}>Got it</Text>
                   </Pressable>
@@ -122,6 +119,4 @@ const styles = StyleSheet.create({
   btn: { flex: 1, height: 56, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   primary: { backgroundColor: colors.ink },
   primaryText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  ghost: { backgroundColor: colors.surface2 },
-  ghostText: { color: colors.ink, fontSize: 15, fontWeight: "700" },
 });

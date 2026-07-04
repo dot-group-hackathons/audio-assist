@@ -6,7 +6,10 @@ export type Tab = "home" | "sounds" | "history" | "watch";
 interface Props {
   active: Tab;
   onSelect(tab: Tab): void;
-  onSimulate(): void;
+  /** Whether the classifier is currently listening. */
+  running: boolean;
+  /** Start/stop listening — the center button's primary action. */
+  onToggleListening(): void;
   bottomInset: number;
 }
 
@@ -17,14 +20,21 @@ const ITEMS: { key: Tab; label: string; icon: string }[] = [
   { key: "watch", label: "Watch", icon: "⌚" },
 ];
 
-export default function BottomNav({ active, onSelect, onSimulate, bottomInset }: Props) {
+export default function BottomNav({ active, onSelect, running, onToggleListening, bottomInset }: Props) {
   return (
     <View style={[styles.nav, { paddingBottom: 10 + bottomInset }]}>
       <NavButton item={ITEMS[0]} active={active === "home"} onPress={() => onSelect("home")} />
       <NavButton item={ITEMS[1]} active={active === "sounds"} onPress={() => onSelect("sounds")} />
 
-      <Pressable style={styles.fab} onPress={onSimulate} accessibilityRole="button" accessibilityLabel="Simulate a detection">
-        <Text style={styles.fabIcon}>✳︎</Text>
+      {/* Center button = start/stop listening, the app's primary action. */}
+      <Pressable
+        style={[styles.fab, running && styles.fabOn]}
+        onPress={onToggleListening}
+        accessibilityRole="button"
+        accessibilityState={{ selected: running }}
+        accessibilityLabel={running ? "Stop listening" : "Start listening"}
+      >
+        <Text style={styles.fabIcon}>{running ? "■" : "▶"}</Text>
       </Pressable>
 
       <NavButton item={ITEMS[2]} active={active === "history"} onPress={() => onSelect("history")} />
@@ -80,5 +90,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  fabIcon: { color: "#fff", fontSize: 24, fontWeight: "700" },
+  // Listening: tint accent so the active state reads at a glance.
+  fabOn: { backgroundColor: colors.accent, shadowColor: colors.accent },
+  fabIcon: { color: "#fff", fontSize: 22, fontWeight: "700" },
 });

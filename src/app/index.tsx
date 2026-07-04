@@ -69,17 +69,6 @@ export default function App() {
     [labels, setMany]
   );
 
-  // Simulate button (center FAB): fire a random enabled sound for a live demo.
-  const simulate = useCallback(() => {
-    const enabled = CATALOG.filter((c) => isItemOn(c, selected));
-    const pool = enabled.length ? enabled : CATALOG;
-    const item = pool[Math.floor(Math.random() * pool.length)];
-    const det: Detection = { id: makeId(), item, score: 0.9, at: Date.now() };
-    setDetections((prev) => [det, ...prev].slice(0, 100));
-    Vibration.vibrate(item.pat);
-    setAlert(det);
-  }, [selected]);
-
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
@@ -105,7 +94,13 @@ export default function App() {
         {tab === "watch" && <WatchScreen />}
       </View>
 
-      <BottomNav active={tab} onSelect={setTab} onSimulate={simulate} bottomInset={insets.bottom} />
+      <BottomNav
+        active={tab}
+        onSelect={setTab}
+        running={running}
+        onToggleListening={toggleListening}
+        bottomInset={insets.bottom}
+      />
 
       <AlertSheet detection={alert} onClose={() => setAlert(null)} />
       <SoundDetailSheet

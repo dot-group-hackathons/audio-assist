@@ -88,7 +88,7 @@ export const CATALOG: CatalogItem[] = [
     safety: false,
     labels: ["Water", "Water tap, faucet", "Sink (filling or washing)"],
     pat: [700],
-    defaultOn: false,
+    defaultOn: true,
   },
   // ---- People ---------------------------------------------------------------
   {
@@ -97,7 +97,9 @@ export const CATALOG: CatalogItem[] = [
     emoji: "📣",
     group: "People",
     safety: false,
-    labels: ["Shout", "Screaming", "Yell", "Speech"],
+    // Deliberately excludes "Speech" — that fires on any talking and would
+    // buzz constantly. Only genuine calling-out (shout/scream/yell).
+    labels: ["Shout", "Screaming", "Yell"],
     pat: [350, 150, 350],
     defaultOn: true,
   },
@@ -129,7 +131,7 @@ export const CATALOG: CatalogItem[] = [
     safety: false,
     labels: ["Dog", "Bark", "Bow-wow"],
     pat: [180, 150, 180, 150, 180],
-    defaultOn: false,
+    defaultOn: true,
   },
 ];
 
@@ -156,4 +158,19 @@ export function existingLabels(item: CatalogItem, allLabels: string[]): string[]
 /** An item is "on" when at least one of its real labels is selected. */
 export function isItemOn(item: CatalogItem, selected: Set<string>): boolean {
   return item.labels.some((l) => selected.has(l));
+}
+
+/**
+ * The selection to use when the user has never chosen (first launch). Every
+ * `defaultOn` sound is enabled, restricted to labels the model actually has.
+ * This is the source of truth for defaults — the picker mirrors it via isItemOn.
+ */
+export function defaultSelection(allLabels: string[]): Set<string> {
+  const available = new Set(allLabels);
+  const out = new Set<string>();
+  for (const item of CATALOG) {
+    if (!item.defaultOn) continue;
+    for (const label of item.labels) if (available.has(label)) out.add(label);
+  }
+  return out;
 }

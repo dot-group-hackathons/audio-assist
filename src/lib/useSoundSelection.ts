@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { defaultSelection } from "./catalog";
 
 const STORAGE_KEY = "selected-yamnet-labels";
 
@@ -19,16 +20,10 @@ export function useSoundSelection(allLabels: string[]) {
         return;
       }
 
+      // First launch: enable every default-on catalog sound (all of them),
+      // restricted to labels the loaded model actually provides.
       if (allLabels.length > 0) {
-        const defaults = new Set([
-          "Speech",
-          "Shout",
-          "Screaming",
-          "Vehicle horn, car horn, honking",
-          "Air horn, truck horn",
-        ]);
-
-        setSelected(defaults);
+        setSelected(defaultSelection(allLabels));
       }
     } catch (err) {
       console.error(err);
