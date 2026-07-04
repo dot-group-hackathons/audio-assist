@@ -23,6 +23,10 @@ export interface CatalogItem {
   pat: number[];
   /** Default-on when the user has never chosen. */
   defaultOn: boolean;
+  /** Min window peak (0–1) to fire — gates loud-nearby-only sounds like speech. */
+  minPeak?: number;
+  /** Per-item min score (0–1), overriding the global default. */
+  minScore?: number;
 }
 
 // Underlying labels use exact AudioSet display names. Any that don't exist in
@@ -79,6 +83,7 @@ export const CATALOG: CatalogItem[] = [
     labels: ["Knock"],
     pat: [200, 150, 200, 150, 200],
     defaultOn: true,
+    minScore: 0.15, // knocks score low and variable per window
   },
   {
     id: "water",
@@ -97,11 +102,22 @@ export const CATALOG: CatalogItem[] = [
     emoji: "📣",
     group: "People",
     safety: false,
-    // Deliberately excludes "Speech" — that fires on any talking and would
-    // buzz constantly. Only genuine calling-out (shout/scream/yell).
+    // Wordless yelling only; shouted words read as "Speech" (see "voice").
     labels: ["Shout", "Screaming", "Yell"],
     pat: [350, 150, 350],
     defaultOn: true,
+  },
+  {
+    id: "voice",
+    name: "Voice nearby",
+    emoji: "🗣️",
+    group: "People",
+    safety: false,
+    labels: ["Speech"],
+    pat: [200, 120, 200],
+    defaultOn: true,
+    minPeak: 0.6, // loud/near only — skip background chatter
+    minScore: 0.5, // real calling ~0.8+; keeps knocks from misfiring as voice
   },
   {
     id: "baby",
@@ -143,6 +159,16 @@ export const itemById = (id: string): CatalogItem | undefined => BY_ID.get(id);
 /** Find the catalog item that owns a given YAMNet label, if any. */
 export function itemForLabel(label: string): CatalogItem | undefined {
   return CATALOG.find((c) => c.labels.includes(label));
+}
+
+/** Loudness gate (0 = none) for a label, from its item's minPeak. */
+export function minPeakForLabel(label: string): number {
+  return itemForLabel(label)?.minPeak ?? 0;
+}
+
+/** Per-label min score, or undefined to use the global default. */
+export function minScoreForLabel(label: string): number | undefined {
+  return itemForLabel(label)?.minScore;
 }
 
 /**

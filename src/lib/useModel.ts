@@ -37,8 +37,12 @@ export function useModel() {
           .split("\n")
           .slice(1)
           .map((line: string) => {
-            const cols = line.split(",");
-            return cols.slice(2).join(",").trim(); 
+            //strip the first two columns (index and mid) and return the rest as the label
+            let name = line.split(",").slice(2).join(",").trim();
+            if (name.startsWith('"') && name.endsWith('"')) {
+              name = name.slice(1, -1).replace(/""/g, '"');
+            }
+            return name;
           })
           .filter(Boolean)
         )

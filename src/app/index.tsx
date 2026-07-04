@@ -3,6 +3,7 @@ import { StatusBar, StyleSheet, Vibration, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useModelContext } from "../lib/ModelContext";
 import { useSoundSelection } from "../lib/useSoundSelection";
+import { useUserName } from "../lib/useUserName";
 import { useClassifier } from "../lib/useClassifier";
 import {
   CATALOG,
@@ -21,6 +22,7 @@ import WatchScreen from "../screens/WatchScreen";
 import BottomNav, { type Tab } from "../components/BottomNav";
 import AlertSheet from "../components/AlertSheet";
 import SoundDetailSheet from "../components/SoundDetailSheet";
+import NameSetupSheet from "../components/NameSetupSheet";
 
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -28,6 +30,7 @@ export default function App() {
   const insets = useSafeAreaInsets();
   const { ready, labels } = useModelContext();
   const { selected, setMany } = useSoundSelection(labels);
+  const { name, ready: nameReady, saveName } = useUserName();
 
   const [tab, setTab] = useState<Tab>("home");
   const [running, setRunning] = useState(false);
@@ -101,6 +104,8 @@ export default function App() {
         onToggleListening={toggleListening}
         bottomInset={insets.bottom}
       />
+
+      <NameSetupSheet visible={nameReady && !name} onSubmit={saveName} />
 
       <AlertSheet detection={alert} onClose={() => setAlert(null)} />
       <SoundDetailSheet
