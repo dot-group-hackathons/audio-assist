@@ -1,8 +1,8 @@
 import * as base64js from 'base64-js';
 import { useCallback, useRef, useEffect } from 'react';
 import LiveAudioStream from 'react-native-live-audio-stream';
-import { useModel } from './useModel';
 import { PermissionsAndroid, Platform } from "react-native";
+import { useModelContext } from './ModelContext';
 
 const WINDOW_SIZE = 15600;
 const MIN_SCORE = 0.30;
@@ -21,7 +21,7 @@ export function useClassifier(
   selectedLabels: Set<string>,
   onResult: (label: string, score: number) => void
 ) {
-  const { ready, classify } = useModel();
+  const { ready, classify } = useModelContext();
   const bufferRef = useRef<number[]>([]);
   const selectedLabelsRef = useRef(selectedLabels);
 

@@ -1,10 +1,10 @@
 import { View } from "react-native";
 import SoundPicker from "../components/SoundPicker";
-import { useModel } from "../lib/useModel";
+import { useModelContext } from "../lib/ModelContext";
 import { useSoundSelection } from "../lib/useSoundSelection";
 
 export default function SettingsScreen() {
-  const { labels } = useModel();
+  const { labels } = useModelContext();
 
   const {
     selected,

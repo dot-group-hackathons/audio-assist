@@ -7,7 +7,7 @@ import {
   View
 } from "react-native";
 import { useClassifier } from "../lib/useClassifier";
-import { useModel } from "../lib/useModel";
+import { useModelContext } from "../lib/ModelContext";
 import { useSoundSelection } from "../lib/useSoundSelection";
 import { useFocusEffect } from "expo-router";
 import { router } from "expo-router";
@@ -21,7 +21,7 @@ interface LogLine {
 export default function App() {
   const [running, setRunning] = useState(false);
   const [lines, setLines] = useState<LogLine[]>([]);
-  const { labels } = useModel();
+  const { labels } = useModelContext();
   const { selected, reload } = useSoundSelection(labels);
 
   useFocusEffect(
