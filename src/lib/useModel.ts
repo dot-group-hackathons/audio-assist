@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { loadTensorflowModel, TensorflowModel } from 'react-native-fast-tflite';
 import { Asset } from "expo-asset";
 
+export interface ClassificationResult {
+  scores: Float32Array;
+  labels: string[];
+}
+
 export function useModel() {
   const modelRef = useRef<TensorflowModel | null>(null);
-  const labelsRef = useRef<string[]>([]);
+  const [labels, setLabels] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -28,15 +33,15 @@ export function useModel() {
           throw new Error("Failed to load YAMNet CSV");
         }
 
-        labelsRef.current = csvText
+        setLabels(csvText
           .split("\n")
           .slice(1)
           .map((line: string) => {
             const cols = line.split(",");
             return cols.slice(2).join(",").trim(); 
           })
-          .filter(Boolean);
-
+          .filter(Boolean)
+        )
         setReady(true);
       } catch (e) {
         console.error("Model load failed:", e);
@@ -47,11 +52,11 @@ export function useModel() {
   function classify(waveform: Float32Array) {
     if (!modelRef.current) return null;
     const outputs = modelRef.current.runSync([waveform.buffer as ArrayBuffer]);
-    const scores = new Float32Array(outputs[0]);
-    let best = 0;
-    for (let i = 1; i < scores.length; i++) if (scores[i] > scores[best]) best = i;
-    return { label: labelsRef.current[best], score: scores[best] };
+    return {
+      scores: new Float32Array(outputs[0]),
+      labels,
+    };
   }
 
-  return { ready, classify };
+  return { ready, classify, labels: labels, };
 }

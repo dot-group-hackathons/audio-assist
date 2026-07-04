@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Pressable,
   ScrollView,
@@ -7,6 +7,10 @@ import {
   View
 } from "react-native";
 import { useClassifier } from "../lib/useClassifier";
+import { useModelContext } from "../lib/ModelContext";
+import { useSoundSelection } from "../lib/useSoundSelection";
+import { useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 
 interface LogLine {
   id: string;
@@ -17,8 +21,16 @@ interface LogLine {
 export default function App() {
   const [running, setRunning] = useState(false);
   const [lines, setLines] = useState<LogLine[]>([]);
+  const { labels } = useModelContext();
+  const { selected, reload } = useSoundSelection(labels);
 
-  const { start, stop, ready } = useClassifier((label, score) => {
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [])
+  );
+
+  const { start, stop, ready } = useClassifier(selected, (label, score) => {
     setLines((prev) => [...prev, { id: Date.now().toString(), kind: 'log', text: `${label} (${score.toFixed(2)})` }]);
   });
 
@@ -35,6 +47,19 @@ export default function App() {
         Background listener that alerts you with a vibration. Base build — every
         sound uses the same buzz.
       </Text>
+
+      <Pressable
+          onPress={() => router.push("/settings")}
+          style={{
+              backgroundColor: "#1f6feb",
+              padding: 12,
+              borderRadius: 8,
+          }}
+      >
+          <Text style={{ color: "white" }}>
+              Select Sounds
+          </Text>
+      </Pressable>
 
       <Pressable
         onPress={toggle}
