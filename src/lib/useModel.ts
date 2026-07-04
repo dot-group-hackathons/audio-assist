@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadTensorflowModel, TensorflowModel } from 'react-native-fast-tflite';
+import { Asset } from "expo-asset";
 
 export function useModel() {
   const modelRef = useRef<TensorflowModel | null>(null);
@@ -8,8 +9,38 @@ export function useModel() {
 
   useEffect(() => {
     (async () => {
-      modelRef.current = await loadTensorflowModel(require('../../assets/yamnet.tflite'), []);
-      setReady(true);
+      try {
+        modelRef.current = await loadTensorflowModel(
+          require("../../assets/yamnet.tflite"),
+          []
+        );
+
+        const asset = Asset.fromModule(
+          require("../../assets/yamnet_class_map.csv")
+        );
+
+        await asset.downloadAsync();
+
+        const response = await fetch(asset.uri);
+        const csvText = await response.text();
+
+        if (!csvText) {
+          throw new Error("Failed to load YAMNet CSV");
+        }
+
+        labelsRef.current = csvText
+          .split("\n")
+          .slice(1)
+          .map((line: string) => {
+            const cols = line.split(",");
+            return cols.slice(2).join(",").trim(); 
+          })
+          .filter(Boolean);
+
+        setReady(true);
+      } catch (e) {
+        console.error("Model load failed:", e);
+      }
     })();
   }, []);
 
