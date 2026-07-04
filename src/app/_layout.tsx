@@ -4,20 +4,9 @@ import { ModelProvider } from "../lib/ModelContext";
 export default function RootLayout() {
   return (
     <ModelProvider>
-      <Stack>
-        <Stack.Screen
-          name="index"
-          options={{
-            title: "Audio Assist",
-          }}
-        />
-
-        <Stack.Screen
-          name="settings"
-          options={{
-            title: "Select Sounds",
-          }}
-        />
+      {/* The app renders its own header/nav ("Sonar" UI), so hide the native stack header. */}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
       </Stack>
     </ModelProvider>
   );

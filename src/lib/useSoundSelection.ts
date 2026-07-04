@@ -62,9 +62,27 @@ export function useSoundSelection(allLabels: string[]) {
     });
   }, []);
 
+  // Add or remove a batch of labels in one persisted write. Used when a single
+  // curated sound in the UI maps to several underlying YAMNet labels.
+  const setMany = useCallback((labels: string[], on: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+
+      for (const label of labels) {
+        if (on) next.add(label);
+        else next.delete(label);
+      }
+
+      save(next);
+
+      return next;
+    });
+  }, []);
+
   return {
     selected,
     toggle,
+    setMany,
     reload: load,
   };
 }

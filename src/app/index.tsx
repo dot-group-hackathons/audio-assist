@@ -1,123 +1,124 @@
-import { useState, useCallback } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
-} from "react-native";
-import { useClassifier } from "../lib/useClassifier";
+import { useCallback, useMemo, useState } from "react";
+import { StatusBar, StyleSheet, Vibration, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useModelContext } from "../lib/ModelContext";
 import { useSoundSelection } from "../lib/useSoundSelection";
-import { useFocusEffect } from "expo-router";
-import { router } from "expo-router";
+import { useClassifier } from "../lib/useClassifier";
+import {
+  CATALOG,
+  existingLabels,
+  isItemOn,
+  itemForLabel,
+  type CatalogItem,
+} from "../lib/catalog";
+import type { Detection } from "../lib/types";
+import { colors } from "../theme";
 
-interface LogLine {
-  id: string;
-  kind: "alert" | "log";
-  text: string;
-}
+import HomeScreen from "../screens/HomeScreen";
+import SoundsScreen from "../screens/SoundsScreen";
+import HistoryScreen from "../screens/HistoryScreen";
+import WatchScreen from "../screens/WatchScreen";
+import BottomNav, { type Tab } from "../components/BottomNav";
+import AlertSheet from "../components/AlertSheet";
+import SoundDetailSheet from "../components/SoundDetailSheet";
+
+const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function App() {
-  const [running, setRunning] = useState(false);
-  const [lines, setLines] = useState<LogLine[]>([]);
-  const { labels } = useModelContext();
-  const { selected, reload } = useSoundSelection(labels);
+  const insets = useSafeAreaInsets();
+  const { ready, labels } = useModelContext();
+  const { selected, setMany } = useSoundSelection(labels);
 
-  useFocusEffect(
-    useCallback(() => {
-      reload();
-    }, [])
+  const [tab, setTab] = useState<Tab>("home");
+  const [running, setRunning] = useState(false);
+  const [detections, setDetections] = useState<Detection[]>([]);
+  const [alert, setAlert] = useState<Detection | null>(null);
+  const [sheetItem, setSheetItem] = useState<CatalogItem | null>(null);
+
+  // A monitored sound was heard: log it, buzz, and raise the alert sheet.
+  const handleResult = useCallback((label: string, score: number) => {
+    const item = itemForLabel(label);
+    if (!item) return; // model fired a class outside our curated catalog
+    const det: Detection = { id: makeId(), item, score, at: Date.now() };
+    setDetections((prev) => [det, ...prev].slice(0, 100));
+    Vibration.vibrate(item.pat);
+    setAlert(det);
+  }, []);
+
+  const { start, stop } = useClassifier(selected, handleResult);
+
+  const toggleListening = useCallback(() => {
+    if (running) {
+      stop();
+      Vibration.cancel();
+    } else {
+      start();
+    }
+    setRunning((r) => !r);
+  }, [running, start, stop]);
+
+  const monitoredCount = useMemo(
+    () => CATALOG.filter((c) => isItemOn(c, selected)).length,
+    [selected]
   );
 
-  const { start, stop, ready } = useClassifier(selected, (label, score) => {
-    setLines((prev) => [...prev, { id: Date.now().toString(), kind: 'log', text: `${label} (${score.toFixed(2)})` }]);
-  });
+  const toggleItem = useCallback(
+    (item: CatalogItem, on: boolean) => {
+      setMany(existingLabels(item, labels), on);
+    },
+    [labels, setMany]
+  );
 
-  const toggle = () => {
-    if (running) stop(); else start();
-    setRunning(!running);
-  };
-
+  // Simulate button (center FAB): fire a random enabled sound for a live demo.
+  const simulate = useCallback(() => {
+    const enabled = CATALOG.filter((c) => isItemOn(c, selected));
+    const pool = enabled.length ? enabled : CATALOG;
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    const det: Detection = { id: makeId(), item, score: 0.9, at: Date.now() };
+    setDetections((prev) => [det, ...prev].slice(0, 100));
+    Vibration.vibrate(item.pat);
+    setAlert(det);
+  }, [selected]);
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>audio-assist</Text>
-      <Text style={styles.subtitle}>
-        Background listener that alerts you with a vibration. Base build — every
-        sound uses the same buzz.
-      </Text>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" />
 
-      <Pressable
-          onPress={() => router.push("/settings")}
-          style={{
-              backgroundColor: "#1f6feb",
-              padding: 12,
-              borderRadius: 8,
-          }}
-      >
-          <Text style={{ color: "white" }}>
-              Select Sounds
-          </Text>
-      </Pressable>
-
-      <Pressable
-        onPress={toggle}
-        style={[styles.toggle, running ? styles.toggleOn : styles.toggleOff]}
-      >
-        <Text style={styles.toggleText}>
-          {running ? "● Listening — tap to stop" : "○ Stopped — tap to start"}
-        </Text>
-      </Pressable>
-
-    <ScrollView style={styles.log} contentContainerStyle={styles.logContent}>
-        {lines.length === 0 ? (
-          <Text style={styles.empty}>No activity yet.</Text>
-        ) : (
-          lines.map((l) => (
-            <Text
-              key={l.id}
-              style={[styles.logLine, l.kind === "alert" && styles.logAlert]}
-            >
-              {l.kind === "alert" ? "📳 " : "· "}
-              {l.text}
-            </Text>
-          ))
+      <View style={styles.screen}>
+        {tab === "home" && (
+          <HomeScreen
+            running={running}
+            ready={ready}
+            monitoredCount={monitoredCount}
+            detections={detections}
+            onToggle={toggleListening}
+            onOpenDetection={setAlert}
+            onGoHistory={() => setTab("history")}
+          />
         )}
-    </ScrollView>
+        {tab === "sounds" && (
+          <SoundsScreen selected={selected} onToggleItem={toggleItem} onOpenItem={setSheetItem} />
+        )}
+        {tab === "history" && (
+          <HistoryScreen detections={detections} onOpenDetection={setAlert} />
+        )}
+        {tab === "watch" && <WatchScreen />}
+      </View>
+
+      <BottomNav active={tab} onSelect={setTab} onSimulate={simulate} bottomInset={insets.bottom} />
+
+      <AlertSheet detection={alert} onClose={() => setAlert(null)} />
+      <SoundDetailSheet
+        item={sheetItem}
+        on={sheetItem ? isItemOn(sheetItem, selected) : false}
+        onToggle={(on) => sheetItem && toggleItem(sheetItem, on)}
+        onClose={() => setSheetItem(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#0d1117", paddingTop: 64, paddingHorizontal: 20 },
-  title: { color: "#f0f6fc", fontSize: 28, fontWeight: "700" },
-  subtitle: { color: "#8b949e", fontSize: 14, marginTop: 6, marginBottom: 20 },
-  toggle: { borderRadius: 12, paddingVertical: 18, alignItems: "center" },
-  toggleOn: { backgroundColor: "#238636" },
-  toggleOff: { backgroundColor: "#21262d", borderWidth: 1, borderColor: "#30363d" },
-  toggleText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  sectionLabel: {
-    color: "#8b949e",
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: 24,
-    marginBottom: 10,
-  },
-  simRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  simBtn: {
-    backgroundColor: "#1f6feb",
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  simBtnDisabled: { backgroundColor: "#21262d", opacity: 0.6 },
-  simBtnText: { color: "#fff", fontSize: 14, fontWeight: "500" },
-  log: { flex: 1, marginTop: 4, marginBottom: 20 },
-  logContent: { paddingBottom: 20 },
-  empty: { color: "#484f58", fontStyle: "italic", marginTop: 8 },
-  logLine: { color: "#8b949e", fontSize: 12, fontFamily: "monospace", marginVertical: 2 },
-  logAlert: { color: "#58a6ff", fontWeight: "600" },
+  root: { flex: 1, backgroundColor: colors.canvas },
+  screen: { flex: 1 },
 });
