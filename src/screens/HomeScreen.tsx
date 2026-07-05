@@ -4,12 +4,15 @@ import type { Detection } from "../lib/types";
 import { dayLabel } from "../lib/types";
 import ListeningHero from "../components/ListeningHero";
 import DetectionCard from "../components/DetectionCard";
+import CaptionBar from "../components/CaptionBar";
 
 interface Props {
   running: boolean;
   ready: boolean;
   monitoredCount: number;
   detections: Detection[];
+  caption: string;
+  transcribing: boolean;
   onToggle(): void;
   onOpenDetection(d: Detection): void;
   onGoHistory(): void;
@@ -27,6 +30,8 @@ export default function HomeScreen({
   ready,
   monitoredCount,
   detections,
+  caption,
+  transcribing,
   onToggle,
   onOpenDetection,
   onGoHistory,
@@ -56,6 +61,8 @@ export default function HomeScreen({
           monitoredCount={monitoredCount}
           onToggle={onToggle}
         />
+
+        <CaptionBar text={caption} transcribing={transcribing} />
 
         <View style={styles.sec}>
           <Text style={styles.secTitle}>Earlier today</Text>

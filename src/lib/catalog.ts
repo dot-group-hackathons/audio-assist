@@ -151,6 +151,26 @@ export const CATALOG: CatalogItem[] = [
   },
 ];
 
+// Synthetic item for the name-called alert; not in CATALOG (no YAMNet label).
+// The transcription pipeline raises it directly to reuse the Detection path.
+export const NAME_CALLED_ITEM: CatalogItem = {
+  id: "name-called",
+  name: "Your name was called",
+  emoji: "🙋",
+  group: "People",
+  safety: false,
+  labels: [],
+  pat: [350, 150, 350, 150, 350],
+  defaultOn: false,
+};
+
+// Labels that also gate speech transcription (the voice-related catalog items).
+const SPEECH_ITEM_IDS = new Set(["voice", "name"]);
+export function isSpeechLabel(label: string): boolean {
+  const item = itemForLabel(label);
+  return item ? SPEECH_ITEM_IDS.has(item.id) : false;
+}
+
 export const GROUP_ORDER: SoundGroup[] = ["Safety", "Home", "People"];
 
 const BY_ID = new Map(CATALOG.map((c) => [c.id, c]));
