@@ -1,7 +1,8 @@
+import { useVibrationPatternsContext } from "@/lib/VibrationPatternsContext";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, cardShadow } from "../theme";
 import type { Detection } from "../lib/types";
 import { fmtTime } from "../lib/types";
+import { cardShadow, colors, radius } from "../theme";
 import Glyph from "./Glyph";
 import HapticBars from "./HapticBars";
 
@@ -13,6 +14,7 @@ interface Props {
 
 export default function DetectionCard({ detection, onPress, showHaptic = true }: Props) {
   const { item, score, at } = detection;
+  const { patternFor } = useVibrationPatternsContext();
 
   return (
     <Pressable
@@ -34,7 +36,7 @@ export default function DetectionCard({ detection, onPress, showHaptic = true }:
         </View>
         {showHaptic && (
           <View style={{ marginTop: 7 }}>
-            <HapticBars pattern={item.pat} tone={item.safety ? "safety" : "accent"} />
+            <HapticBars pattern={patternFor(item)} tone={item.safety ? "safety" : "accent"} />
           </View>
         )}
       </View>

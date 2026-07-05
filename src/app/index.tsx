@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { StatusBar, StyleSheet, Vibration, View } from "react-native";
+import { Platform, StatusBar, StyleSheet, Vibration, View } from "react-native";
 import BackgroundService from 'react-native-background-actions';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -16,14 +16,13 @@ import { useSoundSelection } from "../lib/useSoundSelection";
 import { useUserName } from "../lib/useUserName";
 import { colors } from "../theme";
 
+import { useVibrationPatternsContext } from "@/lib/VibrationPatternsContext";
 import AlertSheet from "../components/AlertSheet";
 import BottomNav, { type Tab } from "../components/BottomNav";
 import NameSetupSheet from "../components/NameSetupSheet";
 import SoundDetailSheet from "../components/SoundDetailSheet";
-import HistoryScreen from "../screens/HistoryScreen";
 import HomeScreen from "../screens/HomeScreen";
 import SoundsScreen from "../screens/SoundsScreen";
-import WatchScreen from "../screens/WatchScreen";
 
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -57,7 +56,7 @@ export default function App() {
     });
   }
 
-  // useNotifications();
+  const { patternFor, setPattern, resetPattern } = useVibrationPatternsContext();
 
   const handleResult = useCallback((label: string, score: number) => {
     const item = itemForLabel(label);
@@ -65,19 +64,17 @@ export default function App() {
     
     const det: Detection = { id: makeId(), item, score, at: Date.now() };
     setDetections((prev) => [det, ...prev].slice(0, 100));
-    Vibration.vibrate(item.pat);
+     
+    let pat = patternFor(item);
+    if (Platform.OS === "android") {
+      pat = [0, ...pat];
+    }
+
+    Vibration.vibrate(pat);
+
     setAlert(det);
 
-    // Notifications.scheduleNotificationAsync({
-    //   content: {
-    //     title: item.name,
-    //     body: `Detected with score of {score}.`,
-    //     sound: true,
-    //   },
-    //   trigger: null
-    // })
-
-  }, []);
+  }, [patternFor]);
 
   const { start, stop } = useClassifier(selected, handleResult);
 
@@ -124,10 +121,6 @@ export default function App() {
         {tab === "sounds" && (
           <SoundsScreen selected={selected} onToggleItem={toggleItem} onOpenItem={setSheetItem} />
         )}
-        {tab === "history" && (
-          <HistoryScreen detections={detections} onOpenDetection={setAlert} />
-        )}
-        {tab === "watch" && <WatchScreen />}
       </View>
 
       <BottomNav
@@ -146,6 +139,9 @@ export default function App() {
         on={sheetItem ? isItemOn(sheetItem, selected) : false}
         onToggle={(on) => sheetItem && toggleItem(sheetItem, on)}
         onClose={() => setSheetItem(null)}
+        patternFor={patternFor}
+        onSetPattern={setPattern}
+        onResetPattern={resetPattern}
       />
     </View>
   );

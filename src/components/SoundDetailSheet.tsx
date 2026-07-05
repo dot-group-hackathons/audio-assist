@@ -1,28 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius } from "../theme";
 import type { CatalogItem } from "../lib/catalog";
+import { colors, radius } from "../theme";
 import Glyph from "./Glyph";
 import HapticBars from "./HapticBars";
 import Toggle from "./Toggle";
+import VibrationRecorder from "./VibrationRecorder";
 
 interface Props {
   item: CatalogItem | null;
   on: boolean;
   onToggle(next: boolean): void;
   onClose(): void;
+  patternFor(item: CatalogItem): number[];
+  onSetPattern(itemId: string, pattern: number[]): void;
+  onResetPattern(itemId: string): void;
 }
 
-const CHANNELS = ["Phone", "Watch", "Flash"];
-const SENS = ["Low", "Balanced", "High"];
+// const CHANNELS = ["Phone", "Watch", "Flash"];
+// const SENS = ["Low", "Balanced", "High"];
 
-export default function SoundDetailSheet({ item, on, onToggle, onClose }: Props) {
+export default function SoundDetailSheet({ item, on, onToggle, onClose, patternFor, onSetPattern, onResetPattern }: Props) {
   const visible = item !== null;
   const slide = useRef(new Animated.Value(0)).current;
 
   // Per-sound preferences. Base build stores these locally as UI state; the
   // engine currently emits one generic buzz regardless (see README).
-  const [channels, setChannels] = useState<Set<string>>(new Set(["Phone", "Watch"]));
+  // const [channels, setChannels] = useState<Set<string>>(new Set(["Phone", "Watch"]));
   const [sens, setSens] = useState("Balanced");
 
   useEffect(() => {
@@ -32,13 +36,13 @@ export default function SoundDetailSheet({ item, on, onToggle, onClose }: Props)
   const translateY = slide.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
   const safety = item?.safety ?? false;
 
-  const toggleChannel = (c: string) =>
-    setChannels((prev) => {
-      const next = new Set(prev);
-      if (next.has(c)) next.delete(c);
-      else next.add(c);
-      return next;
-    });
+  // const toggleChannel = (c: string) =>
+  //   setChannels((prev) => {
+  //     const next = new Set(prev);
+  //     if (next.has(c)) next.delete(c);
+  //     else next.add(c);
+  //     return next;
+  //   });
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -60,7 +64,7 @@ export default function SoundDetailSheet({ item, on, onToggle, onClose }: Props)
                   <Toggle value={on} onChange={onToggle} tone={safety ? "safety" : "accent"} label={`Toggle ${item.name}`} />
                 </View>
 
-                <View style={styles.field}>
+                {/* <View style={styles.field}>
                   <Text style={styles.lbl}>Alert me on</Text>
                   <View style={styles.chips}>
                     {CHANNELS.map((c) => {
@@ -72,16 +76,22 @@ export default function SoundDetailSheet({ item, on, onToggle, onClose }: Props)
                       );
                     })}
                   </View>
-                </View>
+                </View> */}
 
                 <View style={styles.field}>
                   <Text style={styles.lbl}>Vibration pattern</Text>
                   <View style={styles.patternBox}>
-                    <HapticBars pattern={item.pat} tone={safety ? "safety" : "accent"} height={30} unit={0.06} opacity={1} />
+                    <HapticBars pattern={patternFor(item)} tone={safety ? "safety" : "accent"} height={30} unit={0.06} opacity={1} />
                   </View>
                 </View>
 
-                <View style={styles.field}>
+                <VibrationRecorder
+                  initialPattern={patternFor(item)}
+                  onSave={(pattern) => onSetPattern(item.id, pattern)}
+                  onReset={() => onResetPattern(item.id)}
+                />
+
+                {/* <View style={styles.field}>
                   <Text style={styles.lbl}>Sensitivity</Text>
                   <View style={styles.chips}>
                     {SENS.map((s) => {
@@ -93,7 +103,7 @@ export default function SoundDetailSheet({ item, on, onToggle, onClose }: Props)
                       );
                     })}
                   </View>
-                </View>
+                </View> */}
               </>
             )}
           </Animated.View>

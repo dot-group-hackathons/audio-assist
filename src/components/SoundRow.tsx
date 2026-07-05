@@ -1,6 +1,7 @@
+import { useVibrationPatternsContext } from "@/lib/VibrationPatternsContext";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius } from "../theme";
 import type { CatalogItem } from "../lib/catalog";
+import { colors, radius } from "../theme";
 import Glyph from "./Glyph";
 import HapticBars from "./HapticBars";
 import Toggle from "./Toggle";
@@ -13,6 +14,9 @@ interface Props {
 }
 
 export default function SoundRow({ item, on, onToggle, onOpen }: Props) {
+  const { patternFor } = useVibrationPatternsContext();
+
+
   return (
     <View style={[styles.row, !on && styles.off]}>
       <Pressable
@@ -27,7 +31,7 @@ export default function SoundRow({ item, on, onToggle, onOpen }: Props) {
             {item.name}
           </Text>
           <View style={{ marginTop: 7, opacity: on ? 1 : 0.3 }}>
-            <HapticBars pattern={item.pat} tone={!on ? "mute" : item.safety ? "safety" : "accent"} />
+            <HapticBars pattern={patternFor(item)} tone={!on ? "mute" : item.safety ? "safety" : "accent"} />
           </View>
         </View>
       </Pressable>

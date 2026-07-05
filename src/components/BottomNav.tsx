@@ -17,16 +17,13 @@ const ITEMS: { key: Tab; label: string; icon: string }[] = [
   { key: "home", label: "Home", icon: "⌂" },
   { key: "sounds", label: "Sounds", icon: "≋" },
   { key: "history", label: "History", icon: "🕘" },
-  { key: "watch", label: "Watch", icon: "⌚" },
 ];
 
 export default function BottomNav({ active, onSelect, running, onToggleListening, bottomInset }: Props) {
   return (
     <View style={[styles.nav, { paddingBottom: 10 + bottomInset }]}>
       <NavButton item={ITEMS[0]} active={active === "home"} onPress={() => onSelect("home")} />
-      <NavButton item={ITEMS[1]} active={active === "sounds"} onPress={() => onSelect("sounds")} />
 
-      {/* Center button = start/stop listening, the app's primary action. */}
       <Pressable
         style={[styles.fab, running && styles.fabOn]}
         onPress={onToggleListening}
@@ -37,8 +34,10 @@ export default function BottomNav({ active, onSelect, running, onToggleListening
         <Text style={styles.fabIcon}>{running ? "■" : "▶"}</Text>
       </Pressable>
 
-      <NavButton item={ITEMS[2]} active={active === "history"} onPress={() => onSelect("history")} />
-      <NavButton item={ITEMS[3]} active={active === "watch"} onPress={() => onSelect("watch")} />
+      <NavButton item={ITEMS[1]} active={active === "sounds"} onPress={() => onSelect("sounds")} />
+
+
+      {/* <NavButton item={ITEMS[2]} active={active === "history"} onPress={() => onSelect("history")} /> */}
     </View>
   );
 }

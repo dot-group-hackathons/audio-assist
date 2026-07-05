@@ -1,8 +1,9 @@
+import { useVibrationPatternsContext } from "@/lib/VibrationPatternsContext";
 import { useEffect, useRef } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius } from "../theme";
 import type { Detection } from "../lib/types";
 import { fmtTime } from "../lib/types";
+import { colors, radius } from "../theme";
 import Glyph from "./Glyph";
 import HapticBars from "./HapticBars";
 
@@ -15,6 +16,7 @@ interface Props {
 export default function AlertSheet({ detection, onClose }: Props) {
   const visible = detection !== null;
   const slide = useRef(new Animated.Value(0)).current;
+  const { patternFor  } = useVibrationPatternsContext();
 
   useEffect(() => {
     Animated.timing(slide, {
@@ -55,7 +57,7 @@ export default function AlertSheet({ detection, onClose }: Props) {
                 <View style={styles.patternWrap}>
                   <Text style={styles.patternLbl}>Vibration</Text>
                   <HapticBars
-                    pattern={detection.item.pat}
+                    pattern={patternFor(detection.item)}
                     tone={safety ? "safety" : "accent"}
                     height={26}
                     unit={0.045}

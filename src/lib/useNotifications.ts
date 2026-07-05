@@ -20,7 +20,7 @@ export function useNotifications() {
         await Notifications.setNotificationChannelAsync('alerts', {
           name: 'Sound Alerts',
           importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
+          enableVibrate: false
         });
       }
     })();

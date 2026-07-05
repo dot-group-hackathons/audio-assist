@@ -10,7 +10,6 @@ interface Props {
   onToggle(): void;
 }
 
-/** The dark listening hero card. Tapping it starts/stops the classifier. */
 export default function ListeningHero({ running, monitoredCount, ready, onToggle }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -30,9 +29,9 @@ export default function ListeningHero({ running, monitoredCount, ready, onToggle
   const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.6] });
   const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] });
 
-  const title = running ? "All quiet" : ready ? "Tap to start listening" : "Warming up…";
+  const title = running ? "Listening" : "Tap to start listening";
   const sub = running
-    ? `Monitoring ${monitoredCount} sound${monitoredCount === 1 ? "" : "s"} on-device. You'll feel a buzz the moment something matters.`
+    ? `Monitoring ${monitoredCount} sound${monitoredCount === 1 ? "" : "s"} on-device.`
     : ready
       ? "AudioAssist isn't listening yet. Start it to be alerted by vibration."
       : "Loading the on-device sound model.";
@@ -61,11 +60,6 @@ export default function ListeningHero({ running, monitoredCount, ready, onToggle
       <Text style={styles.sub}>{sub}</Text>
 
       <Waveform active={running} />
-
-      <View style={styles.privacy}>
-        <Text style={styles.shield}>🛡️</Text>
-        <Text style={styles.privacyText}>Audio never leaves your phone</Text>
-      </View>
     </Pressable>
   );
 }
