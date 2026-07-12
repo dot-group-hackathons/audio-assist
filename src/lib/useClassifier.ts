@@ -2,16 +2,12 @@ import * as base64js from 'base64-js';
 import { useCallback, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from "react-native";
 import LiveAudioStream from 'react-native-live-audio-stream';
-import { isSpeechLabel, minPeakForLabel, minScoreForLabel } from './catalog';
+import { minPeakForLabel, minScoreForLabel } from './catalog';
 import { useModelContext } from './ModelContext';
 
 const WINDOW_SIZE = 15600;
 const HOP_SIZE = WINDOW_SIZE >> 1; // 50% overlap so sounds aren't split across windows
 const MIN_SCORE = 0.20;
-
-// On speech, hand Whisper the last SEGMENT_SAMPLES; cooldown avoids re-transcribing.
-const SEGMENT_SAMPLES = 16000 * 6; // ~6 s at 16 kHz
-const SPEECH_COOLDOWN_MS = 4000;
 
 // Normalize each window toward TARGET_PEAK
 // Skip windows below GAIN_FLOOR. 
@@ -47,7 +43,7 @@ export function useClassifier(
   onResult: (label: string, score: number) => void,
   opts?: {
     transcriptionEnabled?: boolean;
-    onSpeechSegment?: (pcm: Float32Array) => void;
+    onAudioChunk?: (pcm: Float32Array) => void;
   }
 ) {
   const { ready, classify } = useModelContext();
@@ -55,10 +51,8 @@ export function useClassifier(
   const selectedLabelsRef = useRef(selectedLabels);
 
   // Transcription state via refs so the mic closure sees current values live.
-  const speechBufferRef = useRef<number[]>([]);
-  const lastSpeechAtRef = useRef(0);
   const transcriptionRef = useRef(opts?.transcriptionEnabled ?? false);
-  const onSpeechRef = useRef(opts?.onSpeechSegment);
+  const onAudioChunkRef = useRef(opts?.onAudioChunk);
 
   useEffect(() => {
     selectedLabelsRef.current = selectedLabels;
@@ -66,8 +60,8 @@ export function useClassifier(
 
   useEffect(() => {
     transcriptionRef.current = opts?.transcriptionEnabled ?? false;
-    onSpeechRef.current = opts?.onSpeechSegment;
-  }, [opts?.transcriptionEnabled, opts?.onSpeechSegment]);
+    onAudioChunkRef.current = opts?.onAudioChunk;
+  }, [opts?.transcriptionEnabled, opts?.onAudioChunk]);
 
   const start = useCallback(async() => {
     if (!ready) return;
@@ -76,8 +70,6 @@ export function useClassifier(
     if (!granted) return;
 
     bufferRef.current = [];
-    speechBufferRef.current = [];
-    lastSpeechAtRef.current = 0;
 
     LiveAudioStream.init({
       sampleRate: 16000,
@@ -93,19 +85,15 @@ export function useClassifier(
       const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
       const transcribing = transcriptionRef.current;
+      const chunk = transcribing ? new Float32Array(bytes.length >> 1) : null;
       for (let i = 0; i + 1 < bytes.length; i += 2) {
         const sample = view.getInt16(i, true) / 32768;
         bufferRef.current.push(sample);
-        if (transcribing) speechBufferRef.current.push(sample);
+        if (chunk) chunk[i >> 1] = sample;
       }
 
-      // Keep only the last ~6 s of raw audio for a possible transcription.
-      if (transcribing && speechBufferRef.current.length > SEGMENT_SAMPLES) {
-        speechBufferRef.current.splice(
-          0,
-          speechBufferRef.current.length - SEGMENT_SAMPLES
-        );
-      }
+      // Feed the raw chunk straight to the realtime transcriber (it slices/VADs).
+      if (chunk && onAudioChunkRef.current) onAudioChunkRef.current(chunk);
 
       // Overlapping windows: advance by HOP_SIZE, not WINDOW_SIZE.
       while (bufferRef.current.length >= WINDOW_SIZE) {
@@ -141,18 +129,6 @@ export function useClassifier(
         }
         if (bestLabel) {
           onResult(bestLabel, bestScore);
-
-          // Speech + opted in: hand the rolling buffer to Whisper (rate-limited).
-          if (transcribing && onSpeechRef.current && isSpeechLabel(bestLabel)) {
-            const now = Date.now();
-            if (
-              now - lastSpeechAtRef.current >= SPEECH_COOLDOWN_MS &&
-              speechBufferRef.current.length >= 16000
-            ) {
-              lastSpeechAtRef.current = now;
-              onSpeechRef.current(new Float32Array(speechBufferRef.current));
-            }
-          }
         }
       }
     });

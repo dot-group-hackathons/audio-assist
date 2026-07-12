@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { colors, radius } from "../theme";
 import Toggle from "./Toggle";
+import { STT_ENGINES, type SttEngineId } from "../lib/sttEngine";
 
 interface Props {
   visible: boolean;
@@ -23,6 +24,8 @@ interface Props {
   progress: number; // 0..1
   onEnableTranscription(): void;
   onDisableTranscription(): void;
+  engine: SttEngineId;
+  onChooseEngine(id: SttEngineId): void;
   onClose(): void;
 }
 
@@ -37,6 +40,8 @@ export default function SettingsSheet({
   progress,
   onEnableTranscription,
   onDisableTranscription,
+  engine,
+  onChooseEngine,
   onClose,
 }: Props) {
   const slide = useRef(new Animated.Value(0)).current;
@@ -124,6 +129,25 @@ export default function SettingsSheet({
                     label="Toggle voice transcription"
                   />
                 </View>
+
+                {/* Engine picker */}
+                <Text style={[styles.lbl, { marginTop: 18 }]}>Model</Text>
+                <View style={styles.chips}>
+                  {STT_ENGINES.map((e) => {
+                    const active = engine === e.id;
+                    return (
+                      <Pressable
+                        key={e.id}
+                        onPress={() => e.available && onChooseEngine(e.id)}
+                        disabled={!e.available}
+                        style={[styles.chip, active && styles.chipOn, !e.available && styles.chipDisabled]}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextOn]}>{e.label}</Text>
+                        <Text style={[styles.chipSub, active && styles.chipTextOn]}>{e.sub}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
 
               <Pressable style={styles.doneBtn} onPress={onClose}>
@@ -178,6 +202,21 @@ const styles = StyleSheet.create({
   hintReady: { color: colors.ok, fontWeight: "700" },
   row: { flexDirection: "row", alignItems: "center", gap: 14 },
   rowTitle: { fontSize: 16, fontWeight: "800", color: colors.ink, letterSpacing: -0.2 },
+  chips: { flexDirection: "row", gap: 10 },
+  chip: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  chipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  chipDisabled: { opacity: 0.45 },
+  chipText: { fontSize: 14, fontWeight: "800", color: colors.ink },
+  chipTextOn: { color: "#fff" },
+  chipSub: { fontSize: 11, fontWeight: "600", color: colors.muted, marginTop: 2 },
   doneBtn: {
     marginTop: 6,
     height: 54,

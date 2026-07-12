@@ -17,6 +17,7 @@ import { useClassifier } from "../lib/useClassifier";
 import { useSoundSelection } from "../lib/useSoundSelection";
 import { useUserName } from "../lib/useUserName";
 import { useTranscriptionOptIn } from "../lib/useTranscriptionOptIn";
+import { useSttEngine } from "../lib/useSttEngine";
 import { matchesName } from "../lib/nameMatch";
 import { colors } from "../theme";
 
@@ -33,6 +34,12 @@ import HistoryScreen from "../screens/HistoryScreen";
 
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// tiny.en's stock outputs on near-silence — dropped so they don't flash as captions.
+const HALLUCINATIONS = new Set([
+  "you", "thank you.", "thank you", "thanks for watching!", "[blank_audio]",
+  "(silence)", ".", "bye.", "you're welcome.",
+]);
+
 export default function App() {
   const insets = useSafeAreaInsets();
   const { ready, labels } = useModelContext();
@@ -43,9 +50,12 @@ export default function App() {
     downloading,
     progress,
     prepare,
-    transcribe,
+    startStream,
+    feed,
+    stopStream,
   } = useWhisperContext();
   const { optedIn, ready: optInReady, setOptIn } = useTranscriptionOptIn();
+  const { engine, choose: chooseEngine } = useSttEngine();
 
   const [tab, setTab] = useState<Tab>("home");
   const [running, setRunning] = useState(false);
@@ -53,9 +63,7 @@ export default function App() {
   const [alert, setAlert] = useState<Detection | null>(null);
   const [sheetItem, setSheetItem] = useState<CatalogItem | null>(null);
   const [caption, setCaption] = useState("");
-  const [transcribing, setTranscribing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const busyRef = useRef(false);
 
   const backgroundOptions = {
     taskName: 'AudioAssist',
@@ -95,45 +103,54 @@ export default function App() {
 
   }, [patternFor]);
 
-  // Transcribe buffered speech, show captions, and alert if the name was called.
-  const handleSpeech = useCallback(
-    async (pcm: Float32Array) => {
-      if (busyRef.current) return;
-      busyRef.current = true;
-      setTranscribing(true);
-      try {
-        const text = await transcribe(pcm);
-        if (text) {
-          setCaption(text);
-          if (name && matchesName(text, name)) {
-            const det: Detection = {
-              id: makeId(),
-              item: NAME_CALLED_ITEM,
-              score: 1,
-              at: Date.now(),
-            };
-            setDetections((prev) => [det, ...prev].slice(0, 100));
-            Vibration.vibrate(NAME_CALLED_ITEM.pat);
-            setAlert(det);
-          }
-        }
-      } finally {
-        busyRef.current = false;
-        setTranscribing(false);
+  // A realtime slice of text arrived: show it as a caption and, if it contains
+  // the user's name, raise a name-called alert. Common silence hallucinations
+  // from tiny.en are filtered out.
+  const handleText = useCallback(
+    (text: string) => {
+      const clean = text.trim();
+      if (!clean || HALLUCINATIONS.has(clean.toLowerCase())) return;
+      setCaption(clean);
+      if (name && matchesName(clean, name)) {
+        const det: Detection = {
+          id: makeId(),
+          item: NAME_CALLED_ITEM,
+          score: 1,
+          at: Date.now(),
+        };
+        setDetections((prev) => [det, ...prev].slice(0, 100));
+        Vibration.vibrate(NAME_CALLED_ITEM.pat);
+        setAlert(det);
       }
     },
-    [transcribe, name]
+    [name]
   );
 
+  // Keep the latest handler reachable from the long-lived stream callback.
+  const handleTextRef = useRef(handleText);
+  useEffect(() => {
+    handleTextRef.current = handleText;
+  }, [handleText]);
+
+  const transcriptionActive = running && optedIn === true && whisperReady;
+
   const { start, stop } = useClassifier(selected, handleResult, {
-    transcriptionEnabled: optedIn === true && whisperReady,
-    onSpeechSegment: handleSpeech,
+    transcriptionEnabled: transcriptionActive,
+    onAudioChunk: feed,
   });
 
   // Once opted in, load the Whisper context (download if first time).
   useEffect(() => {
     if (optedIn === true) prepare();
   }, [optedIn, prepare]);
+
+  // Run a realtime STT session while listening with transcription enabled.
+  useEffect(() => {
+    if (transcriptionActive) startStream((t) => handleTextRef.current(t));
+    return () => {
+      stopStream();
+    };
+  }, [transcriptionActive, startStream, stopStream]);
 
   const toggleListening = useCallback(async () => {
     if (running) {
@@ -179,7 +196,7 @@ export default function App() {
             monitoredCount={monitoredCount}
             detections={detections}
             caption={caption}
-            transcribing={transcribing}
+            transcribing={transcriptionActive}
             onToggle={toggleListening}
             onOpenDetection={setAlert}
             onGoHistory={() => setTab("history")}
@@ -220,6 +237,8 @@ export default function App() {
         progress={progress}
         onEnableTranscription={enableTranscription}
         onDisableTranscription={() => setOptIn(false)}
+        engine={engine}
+        onChooseEngine={chooseEngine}
         onClose={() => setSettingsOpen(false)}
       />
 
